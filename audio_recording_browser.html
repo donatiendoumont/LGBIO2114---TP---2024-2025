@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        margin-top: 50px;
+      }
+
+      h3 {
+        color: #333;
+      }
+
+      label {
+        font-weight: bold;
+      }
+
+      input {
+        width: 60px;
+        text-align: center;
+        font-size: 16px;
+        margin-left: 5px;
+      }
+
+      button {
+        font-size: 16px;
+        padding: 10px 20px;
+        margin: 10px;
+        border: none;
+        cursor: pointer;
+        border-radius: 5px;
+      }
+
+      #startButton {
+        background-color: #28a745;
+        color: white;
+      }
+
+      #stopButton {
+        background-color: #dc3545;
+        color: white;
+      }
+
+      #stopButton:disabled {
+        background-color: #aaa;
+        cursor: not-allowed;
+      }
+
+      #timer {
+        font-size: 18px;
+        font-weight: bold;
+        margin-top: 10px;
+      }
+
+      #recordingIndicator {
+        display: none;
+        width: 15px;
+        height: 15px;
+        background-color: red;
+        border-radius: 50%;
+        margin: 10px auto;
+        animation: blink 1s infinite;
+      }
+
+      @keyframes blink {
+        50% { opacity: 0.3; }
+      }
+
+      #download {
+        display: none;
+        margin-top: 15px;
+        font-size: 16px;
+        text-decoration: none;
+        color: white;
+        background-color: #007bff;
+        padding: 8px 12px;
+        border-radius: 5px;
+        display: inline-block;
+      }
+    </style>
+  </head>
+  <body>
+    <h3>🎤 Record Audio in Browser</h3>
+
+    <label for="duration">Duration (sec):</label>
+    <input type="number" id="duration" min="1" value="5">
+
+    <br><br>
+
+    <button id="startButton" onclick="startRecording()">Start Recording</button>
+    <button id="stopButton" onclick="stopRecording()" disabled>Stop Recording</button>
+
+    <div id="recordingIndicator"></div>
+
+    <p id="timer">⏳ Elapsed Time: 0s</p>
+
+    <a id="download">⬇️ Download Recording</a>
+
+    <script>
+      let mediaRecorder;
+      let audioChunks = [];
+      let timerInterval;
+      let elapsedTime = 0;
+
+      async function startRecording() {
+        const duration = parseInt(document.getElementById("duration").value, 10);
+        if (isNaN(duration) || duration <= 0) {
+          alert("Please enter a valid recording duration.");
+          return;
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        
+        mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+        mediaRecorder.start();
+
+        document.getElementById("startButton").disabled = true;
+        document.getElementById("stopButton").disabled = false;
+        document.getElementById("recordingIndicator").style.display = "block";
+
+        elapsedTime = 0;
+        document.getElementById("timer").innerText = `⏳ Elapsed Time: ${elapsedTime}s`;
+
+        // Start the timer
+        timerInterval = setInterval(() => {
+          elapsedTime++;
+          document.getElementById("timer").innerText = `⏳ Elapsed Time: ${elapsedTime}s`;
+          if (elapsedTime >= duration) {
+            stopRecording();
+          }
+        }, 1000);
+      }
+
+      function stopRecording() {
+        if (!mediaRecorder) return;
+
+        mediaRecorder.stop();
+        mediaRecorder.onstop = () => {
+          clearInterval(timerInterval);
+          document.getElementById("recordingIndicator").style.display = "none";
+
+          const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
+          const audioUrl = URL.createObjectURL(audioBlob);
+          
+          // Create download link
+          const downloadLink = document.getElementById("download");
+          downloadLink.href = audioUrl;
+          downloadLink.download = "recorded_audio.wav";
+          downloadLink.style.display = "block";
+          downloadLink.innerText = "⬇️ Download Recorded Audio";
+        };
+
+        document.getElementById("startButton").disabled = false;
+        document.getElementById("stopButton").disabled = true;
+      }
+    </script>
+  </body>
+</html>
